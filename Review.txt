@@ -1,0 +1,14 @@
+README.md is kinda fine.
+Only one commit: you didn't use fully github.
+
+Makefile:
+  Why when I try to compile your code It doesn't find the std::pow method?
+  Why in your makefile you have the options for make parallel? WHy are you linking to the library tbb?
+
+Comments:
+  I would have liked to see more comments in the .cpp files
+
+Code Design:
+  Why are you defining the parameters with std::pow(10, -6) instead of simply 1e-6?
+
+I would have liked to see the usage of getpot or json or muparser...
