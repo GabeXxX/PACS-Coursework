@@ -1,5 +1,6 @@
 #include <map>
 #include <array>
+#include <vector>
 
 namespace algebra{
 
@@ -19,17 +20,34 @@ namespace algebra{
     class Matrix{
 
         private:
-            std::map<std::array<std::size_t, 2>, T> data;
-            std::size_t nRows = 0;
-            std::size_t nColumns = 0;
+            std::map<std::array<std::size_t, 2>, T> uncompressed_data;
+            std::vector<T> compressed_data;
+            std::size_t n_rows = 0;
+            std::size_t n_columns = 0;
 
         public:
 
-            /*Constructor that takes the size of the matrix
-            * @param nRows Number of rows
-            * @param nColumns Number of columns
+            /*!
+            * Constructor that takes the size of the matrix
+            * @param nrows Number of rows
+            * @param ncolumns Number of columns
             */
-            Matrix(std::size_t nRows, std::size_t nColumns) : nRows{nRows}, nColumns{nColumns} {};
+            Matrix(std::size_t nrows, std::size_t ncolumns) : n_rows{nrows}, n_columns{ncolumns} {
+                compressed_data.resize(n_rows*n_columns);
+            };
+
+            /*!
+            * Method to resize the matrix
+            * @param nrows Number of rows
+            * @param ncolumns Number of columns
+            */
+             void resize(std::size_t nrows, std::size_t ncolumns){
+                n_rows = nrows;
+                n_columns = ncolumns;
+                compressed_data.resize(n_rows*n_columns);
+            }
+
+
     };
     
 
