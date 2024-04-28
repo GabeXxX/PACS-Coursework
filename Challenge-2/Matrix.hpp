@@ -25,6 +25,8 @@ namespace algebra
     private:
         std::map<std::array<std::size_t, 2>, T> uncompressed_data;
         std::vector<T> compressed_data;
+        std::vector<std::size_t> compressed_row_indexes;
+        std::vector<std::size_t> compressed_column_indexes;
         std::size_t n_rows = 0;
         std::size_t n_columns = 0;
         bool is_compressed = false;
@@ -68,8 +70,8 @@ namespace algebra
             if (!is_compressed)
             {
                 if (order_ == StorageOrder::RowMajor)
-                {   
-                    //TODO: check is using find is efficent in this context
+                {
+                    // TODO: check is using find is efficent in this context
                     auto it = uncompressed_data.find({i, j});
                     return (it != uncompressed_data.end()) ? it->second : 0;
                 }
@@ -82,7 +84,7 @@ namespace algebra
             else
             {
                 // Compressed matrix
-                //TODO: adjust indexing for vector type compressed data
+                // TODO: adjust indexing for vector type compressed data
                 if (order_ == StorageOrder::RowMajor)
                 {
                     auto it = compressed_data.find({i, j});
@@ -121,22 +123,52 @@ namespace algebra
             }
         };
 
-
         /*!
-        * Compress the matrix storage
-        */ 
-        void compress() {
-            if (!compressed) {
-                if (order_ == StorageOrder::RowMajor) {
-                    // Compress to CSR format
-                    // Implementation...
-                } else {
-                    // Compress to CSC format
-                    // Implementation...
-                }
-                compressed = true;
-            }
-        }
-    };
+         * Compress the matrix storage
+         */
+        void compress()
+        {
+            if (!compressed)
+            {
+                if (order_ == StorageOrder::RowMajor)
+                {
+                    if (order_ == StorageOrder::RowMajor)
+                    {
+                        // Initialize vectors for CSR format
+                        std::vector<T> values;
+                        std::vector<std::size_t> inner_indexes(n_rows + 1, 0);
+                        std::vector<std::size_t> outer_indices(n_columns, 0);
 
-}
+                        // Traverse the matrix data and populate vectors
+                        for (const auto &elem : data_)
+                        {
+                            std::size_t i = elem.first[0]; // Row index
+                            std::size_t j = elem.first[1]; // Column index
+
+                            // Store value and column index
+                            values.push_back(elem.second);
+                            outer_indices.push_back(j);
+
+                            // Increment inner index for the current row
+                            inner_indexes[i + 1]++;
+                        }
+
+                        // Cumulative sum to obtain inner indexes
+                        for (std::size_t i = 1; i <= n_rows; ++i)
+                        {
+                            inner_indexes[i] += inner_indexes[i - 1];
+                        }
+
+                        // Update internal storage
+                        compressed_data = std::make_tuple(values, inner_indexes, outer_indices);
+                    }
+                    else
+                    {
+                        // Compress to CSC format
+                        // Implementation...
+                    }
+                    compressed = true;
+                }
+            }
+        };
+    }
