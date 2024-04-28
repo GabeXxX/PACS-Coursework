@@ -59,7 +59,7 @@ namespace algebra
          * @param j Column index
          * @return std::out_of_range if indexes are out of range
          */
-        T &operator()(std::size_t i, std::size_t j, const T &value) const
+        const T &operator()(std::size_t i, std::size_t j, const T &value) const
         {
             if constexpr (i >= n_rows || j >= n_columns)
             {
