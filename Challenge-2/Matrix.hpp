@@ -27,6 +27,7 @@ namespace algebra
         std::vector<T> compressed_data;
         std::size_t n_rows = 0;
         std::size_t n_columns = 0;
+        bool is_compressed = false;
 
     public:
         /*!
@@ -34,10 +35,7 @@ namespace algebra
          * @param nrows Number of rows
          * @param ncolumns Number of columns
          */
-        Matrix(std::size_t nrows, std::size_t ncolumns) : n_rows{nrows}, n_columns{ncolumns}
-        {
-            compressed_data.resize(n_rows * n_columns);
-        };
+        Matrix(std::size_t nrows, std::size_t ncolumns) : n_rows{nrows}, n_columns{ncolumns} {};
 
         /*!
          * Method to resize the matrix
@@ -48,64 +46,95 @@ namespace algebra
         {
             n_rows = nrows;
             n_columns = ncolumns;
-            compressed_data.resize(n_rows * n_columns);
+
+            if constexpr (is_compressed)
+            {
+                compressed_data.resize(n_rows * n_columns);
+            }
         };
 
         /*!
          * Method to access element in the matrix
          * @param i Row index
          * @param j Column index
-         * @return std::out_of_range if the element is not present or indexes are out of range
+         * @return std::out_of_range if indexes are out of range
          */
-        T& operator()(std::size_t i, std::size_t j, const T& value) const
+        T &operator()(std::size_t i, std::size_t j, const T &value) const
         {
-            if constexpr(i >= n_rows || j >= n_columns){
+            if constexpr (i >= n_rows || j >= n_columns)
+            {
                 throw std::out_of_range("Index out of range");
             }
-            if constexpr (Order == StorageOrder::ROWMAJOR)
+            if (!is_compressed)
             {
-                auto it = uncompressed_data.find({i, j});
-                if (it != uncompressed_data.end())
-                {
-                    return it->second;
+                if (order_ == StorageOrder::RowMajor)
+                {   
+                    //TODO: check is using find is efficent in this context
+                    auto it = uncompressed_data.find({i, j});
+                    return (it != uncompressed_data.end()) ? it->second : 0;
                 }
                 else
                 {
-                    throw std::out_of_range("Element not found");
+                    auto it = uncompressed_data.find({j, i}); // For column-major ordering
+                    return (it != uncompressed_data.end()) ? it->second : 0;
                 }
             }
             else
             {
-                auto it = uncompressed_data.find({j, i}); // For column-major ordering
-                if (it != uncompressed_data.end())
+                // Compressed matrix
+                //TODO: adjust indexing for vector type compressed data
+                if (order_ == StorageOrder::RowMajor)
                 {
-                    return it->second;
+                    auto it = compressed_data.find({i, j});
+                    return (it != compressed_data.end()) ? it->second : 0;
                 }
                 else
                 {
-                    throw std::out_of_range("Element not found");
+                    auto it = compressed_data.find({j, i}); // For column-major ordering
+                    return (it != compressed_data.end()) ? it->second : 0;
                 }
             }
         };
 
         /*!
-         * Method to insert element in  the matrix
+         * Method to set/add element in the matrix
          * @param i Row index
          * @param j Column index
-         * For now if an element is already present is simply overwritten
+         * @return std::out_of_range if indexes are out of range
          */
-        void operator()(std::size_t i, std::size_t j, const T& value)
+        T &operator()(std::size_t i, std::size_t j, const T &value)
         {
-            if constexpr(i >= n_rows || j >= n_columns){
+            if constexpr (i >= n_rows || j >= n_columns)
+            {
                 throw std::out_of_range("Index out of range");
             }
-            if constexpr (Order == StorageOrder::ROWMAJOR)
+            if (is_compressed)
             {
-                uncompressed_data[{i, j}] = value;
+                throw std::runtime_error("Cannot insert elements in compressed state");
             }
             else
             {
-                uncompressed_data[{j, i}] = value;
+                if (order == StorageOrder::ROWMAJOR)
+                    data_[{i, j}] = value;
+                else
+                    data_[{j, i}] = value; // For column-major ordering
+            }
+        };
+
+
+        /*!
+        * Compress the matrix storage
+        */ 
+        void compress() {
+            if (!compressed) {
+                if (order_ == StorageOrder::RowMajor) {
+                    // Compress to CSR format
+                    // Implementation...
+                } else {
+                    // Compress to CSC format
+                    // Implementation...
+                }
+                compressed = true;
             }
         }
     };
