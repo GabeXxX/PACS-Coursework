@@ -64,7 +64,7 @@ namespace algebra
          */
         const T &operator()(std::size_t i, std::size_t j, const T &value) const
         {
-            if constexpr (i >= n_rows || j >= n_columns)
+            if (i >= n_rows || j >= n_columns)
             {
                 throw std::out_of_range("Index out of range");
             }
@@ -106,7 +106,7 @@ namespace algebra
          */
         T &operator()(std::size_t i, std::size_t j, const T &value)
         {
-            if constexpr (i >= n_rows || j >= n_columns)
+            if (i >= n_rows || j >= n_columns)
             {
                 throw std::out_of_range("Index out of range");
             }
@@ -132,7 +132,7 @@ namespace algebra
             {
                 if (Order == StorageOrder::ROWMAJOR)
                 {
-                    // Compressed Sparse Row 
+                    // Compressed Sparse Row
                     for (const auto &elem : uncompressed_data)
                     {
                         std::size_t i = elem.first[0];
@@ -153,7 +153,8 @@ namespace algebra
 
                     is_compressed = true;
                 }
-                else{
+                else
+                {
                     // Compressed Sparse Column
                     for (const auto &elem : uncompressed_data)
                     {
@@ -167,19 +168,51 @@ namespace algebra
                         compressed_inner_indexes[j + 1]++;
                     }
 
-                    // Accumulates the counts from the previous rows, effectively transforming the counts into the starting indexes for each row in the compressed format
                     for (std::size_t j = 1; j <= n_columns; ++j)
                     {
                         compressed_inner_indexes[j] += compressed_inner_indexes[j - 1];
                     }
 
-                    is_compressed = true; 
-
+                    is_compressed = true;
                 }
             }
             else
             {
                 std::cout << "Matrix already compressed" << std::endl;
+            }
+        }
+
+        /*!
+         * Uncompress the matrix storage
+         */
+        void uncompress()
+        {
+            if (is_compressed)
+            {
+                if (Order == StorageOrder::ROWMAJOR)
+                {
+                    for (std::size_t i = 0; i < n_rows; ++i)
+                    {
+                        for (std::size_t k = compressed_inner_indexes[i]; k < compressed_inner_indexes[i + 1]; ++k)
+                        {
+                            uncompressed_data[{i, compressed_outer_indexes[k]}] = compressed_data[k];
+                        }
+                    }
+                }
+                else
+                {
+                    for (std::size_t j = 0; j < n_columns; ++j)
+                    {
+                        for (std::size_t k = compressed_inner_indexes[j]; k < compressed_inner_indexes[j + 1]; ++k)
+                        {
+                            uncompressed_data[{j, compressed_outer_indexes[k]}] = compressed_data[k];
+                        }
+                    }
+                }
+            }
+            else
+            {
+                std::cout << "Matrix is not compressed" << std::endl;
             }
         }
     };
