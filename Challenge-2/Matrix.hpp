@@ -1,6 +1,7 @@
 #include <map>
 #include <array>
 #include <vector>
+#include <iostream>
 
 namespace algebra
 {
@@ -25,8 +26,8 @@ namespace algebra
     private:
         std::map<std::array<std::size_t, 2>, T> uncompressed_data;
         std::vector<T> compressed_data;
-        std::vector<std::size_t> compressed_row_indexes;
-        std::vector<std::size_t> compressed_column_indexes;
+        std::vector<std::size_t> compressed_inner_indexes;
+        std::vector<std::size_t> compressed_outer_indexes;
         std::size_t n_rows = 0;
         std::size_t n_columns = 0;
         bool is_compressed = false;
@@ -49,7 +50,7 @@ namespace algebra
             n_rows = nrows;
             n_columns = ncolumns;
 
-            if constexpr (is_compressed)
+            if (is_compressed)
             {
                 compressed_data.resize(n_rows * n_columns);
             }
@@ -69,7 +70,7 @@ namespace algebra
             }
             if (!is_compressed)
             {
-                if (order_ == StorageOrder::RowMajor)
+                if (Order == StorageOrder::ROWMAJOR)
                 {
                     // TODO: check is using find is efficent in this context
                     auto it = uncompressed_data.find({i, j});
@@ -77,15 +78,14 @@ namespace algebra
                 }
                 else
                 {
-                    auto it = uncompressed_data.find({j, i}); // For column-major ordering
+                    auto it = uncompressed_data.find({j, i});
                     return (it != uncompressed_data.end()) ? it->second : 0;
                 }
             }
             else
             {
-                // Compressed matrix
                 // TODO: adjust indexing for vector type compressed data
-                if (order_ == StorageOrder::RowMajor)
+                if (Order == StorageOrder::ROWMAJOR)
                 {
                     auto it = compressed_data.find({i, j});
                     return (it != compressed_data.end()) ? it->second : 0;
@@ -116,59 +116,71 @@ namespace algebra
             }
             else
             {
-                if (order == StorageOrder::ROWMAJOR)
-                    data_[{i, j}] = value;
+                if (Order == StorageOrder::ROWMAJOR)
+                    uncompressed_data[{i, j}] = value;
                 else
-                    data_[{j, i}] = value; // For column-major ordering
+                    uncompressed_data[{j, i}] = value;
             }
         };
 
         /*!
          * Compress the matrix storage
          */
-        void compress()
+        void compress() // TODO: delete the uncompressed map
         {
-            if (!compressed)
+            if (!is_compressed)
             {
-                if (order_ == StorageOrder::RowMajor)
+                if (Order == StorageOrder::ROWMAJOR)
                 {
-                    if (order_ == StorageOrder::RowMajor)
+                    // Compressed Sparse Row 
+                    for (const auto &elem : uncompressed_data)
                     {
-                        // Initialize vectors for CSR format
-                        std::vector<T> values;
-                        std::vector<std::size_t> inner_indexes(n_rows + 1, 0);
-                        std::vector<std::size_t> outer_indices(n_columns, 0);
+                        std::size_t i = elem.first[0];
+                        std::size_t j = elem.first[1];
 
-                        // Traverse the matrix data and populate vectors
-                        for (const auto &elem : data_)
-                        {
-                            std::size_t i = elem.first[0]; // Row index
-                            std::size_t j = elem.first[1]; // Column index
+                        compressed_data.push_back(elem.second);
+                        compressed_outer_indexes.push_back(j);
 
-                            // Store value and column index
-                            values.push_back(elem.second);
-                            outer_indices.push_back(j);
-
-                            // Increment inner index for the current row
-                            inner_indexes[i + 1]++;
-                        }
-
-                        // Cumulative sum to obtain inner indexes
-                        for (std::size_t i = 1; i <= n_rows; ++i)
-                        {
-                            inner_indexes[i] += inner_indexes[i - 1];
-                        }
-
-                        // Update internal storage
-                        compressed_data = std::make_tuple(values, inner_indexes, outer_indices);
+                        // Counting the number of non-zero elements encountered in each row of the matrix
+                        compressed_inner_indexes[i + 1]++;
                     }
-                    else
+
+                    // Accumulates the counts from the previous rows, effectively transforming the counts into the starting indexes for each row in the compressed format
+                    for (std::size_t i = 1; i <= n_rows; ++i)
                     {
-                        // Compress to CSC format
-                        // Implementation...
+                        compressed_inner_indexes[i] += compressed_inner_indexes[i - 1];
                     }
-                    compressed = true;
+
+                    is_compressed = true;
+                }
+                else{
+                    // Compressed Sparse Column
+                    for (const auto &elem : uncompressed_data)
+                    {
+                        std::size_t i = elem.first[0];
+                        std::size_t j = elem.first[1];
+
+                        compressed_data.push_back(elem.second);
+                        compressed_outer_indexes.push_back(i);
+
+                        // Counting the number of non-zero elements encountered in each row of the matrix
+                        compressed_inner_indexes[j + 1]++;
+                    }
+
+                    // Accumulates the counts from the previous rows, effectively transforming the counts into the starting indexes for each row in the compressed format
+                    for (std::size_t j = 1; j <= n_columns; ++j)
+                    {
+                        compressed_inner_indexes[j] += compressed_inner_indexes[j - 1];
+                    }
+
+                    is_compressed = true; 
+
                 }
             }
-        };
-    }
+            else
+            {
+                std::cout << "Matrix already compressed" << std::endl;
+            }
+        }
+    };
+}
