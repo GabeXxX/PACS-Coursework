@@ -228,7 +228,12 @@ namespace algebra
             return compressed;
         }
 
-        // Matrix-vector multiplication operator TODO: implement as friend method
+        // TODO: implement as friend method
+        /*!
+         * Matrix-vector multiplication operatoration
+         * @param v vector to permform the matrix-vector moltiplication
+         * @return a vector containing the result of the operation
+         */
         std::vector<T> operator*(const std::vector<T> &v) const
         {
             std::vector<T> result(n_rows, 0); // Initialize result vector
@@ -287,7 +292,22 @@ namespace algebra
             }
 
             return result;
-
         };
+
+        template <typename T, StorageOrder Order>
+        Matrix<T, Order> read_from_file(std::istream &input)
+        {
+            input >> n_rows >> n_columns;
+            this->resize(n_rows, n_columns);
+            for (std::size_t i = 0; i < n_rows; ++i)
+                for (std::size_t j = 0; j < n_columns; ++j)
+                    input >> this->operator()(i, j);
+
+            if (!input.good())
+            {
+                throw std::runtime_error("Problems while reading from file");
+            }
+        }
     };
+
 }
