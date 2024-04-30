@@ -30,7 +30,7 @@ namespace algebra
         std::vector<std::size_t> compressed_outer_indexes;
         std::size_t n_rows = 0;
         std::size_t n_columns = 0;
-        bool is_compressed = false;
+        bool compressed = false;
 
     public:
         /*!
@@ -50,7 +50,7 @@ namespace algebra
             n_rows = nrows;
             n_columns = ncolumns;
 
-            if (is_compressed)
+            if (compressed)
             {
                 compressed_data.resize(n_rows * n_columns);
             }
@@ -68,11 +68,11 @@ namespace algebra
             {
                 throw std::out_of_range("Index out of range");
             }
-            if (!is_compressed)
+            if (!compressed)
             {
                 if (Order == StorageOrder::ROWMAJOR)
                 {
-                    // TODO: check is using find is efficent in this context
+                    // TODO: check if using find is efficent in this context
                     auto it = uncompressed_data.find({i, j});
                     return (it != uncompressed_data.end()) ? it->second : 0;
                 }
@@ -110,7 +110,7 @@ namespace algebra
             {
                 throw std::out_of_range("Index out of range");
             }
-            if (is_compressed)
+            if (compressed)
             {
                 throw std::runtime_error("Cannot insert elements in compressed state");
             }
@@ -126,9 +126,9 @@ namespace algebra
         /*!
          * Compress the matrix storage
          */
-        void compress() // TODO: delete the uncompressed map
+        void compress()
         {
-            if (!is_compressed)
+            if (!compressed)
             {
                 if (Order == StorageOrder::ROWMAJOR)
                 {
@@ -150,8 +150,6 @@ namespace algebra
                     {
                         compressed_inner_indexes[i] += compressed_inner_indexes[i - 1];
                     }
-
-                    is_compressed = true;
                 }
                 else
                 {
@@ -172,9 +170,10 @@ namespace algebra
                     {
                         compressed_inner_indexes[j] += compressed_inner_indexes[j - 1];
                     }
-
-                    is_compressed = true;
                 }
+
+                compressed = true;
+                uncompressed_data.clear();
             }
             else
             {
@@ -187,7 +186,7 @@ namespace algebra
          */
         void uncompress()
         {
-            if (is_compressed)
+            if (compressed)
             {
                 if (Order == StorageOrder::ROWMAJOR)
                 {
@@ -209,11 +208,86 @@ namespace algebra
                         }
                     }
                 }
+
+                compressed = false;
+                compressed_data.clear();
+                compressed_inner_indexes.clear();
+                compressed_outer_indexes.clear();
             }
             else
             {
                 std::cout << "Matrix is not compressed" << std::endl;
             }
         }
+
+        /*!
+         * Check if the matrix is compressed
+         */
+        bool is_compressed()
+        {
+            return compressed;
+        }
+
+        // Matrix-vector multiplication operator TODO: implement as friend method
+        std::vector<T> operator*(const std::vector<T> &v) const
+        {
+            std::vector<T> result(n_rows, 0); // Initialize result vector
+
+            if (compressed)
+            {
+                // Compressed state
+                if (Order == StorageOrder::ROWMAJOR)
+                {
+                    // Row-wise multiplication (CSR format)
+                    for (std::size_t i = 0; i < n_rows; ++i)
+                    {
+                        for (std::size_t k = compressed_inner_indexes[i]; k < compressed_inner_indexes[i + 1]; ++k)
+                        {
+                            result[i] += compressed_data[k] * v[compressed_outer_indexes[k]];
+                        }
+                    }
+                }
+                else
+                {
+                    // Column-wise multiplication (CSC format)
+                    for (std::size_t j = 0; j < n_columns; ++j)
+                    {
+                        for (std::size_t k = compressed_inner_indexes[j]; k < compressed_inner_indexes[j + 1]; ++k)
+                        {
+                            result[compressed_outer_indexes[k]] += compressed_data[k] * v[j];
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Uncompressed state
+                if (Order == StorageOrder::ROWMAJOR)
+                {
+                    // Row-wise multiplication
+                    for (const auto &elem : uncompressed_data)
+                    {
+                        std::size_t i = elem.first[0]; // Row index
+                        std::size_t j = elem.first[1]; // Column index
+
+                        result[i] += elem.second * v[j];
+                    }
+                }
+                else
+                {
+                    // Column-wise multiplication
+                    for (const auto &elem : uncompressed_data)
+                    {
+                        std::size_t i = elem.first[0]; // Row index
+                        std::size_t j = elem.first[1]; // Column index
+
+                        result[j] += elem.second * v[i];
+                    }
+                }
+            }
+
+            return result;
+
+        };
     };
 }
