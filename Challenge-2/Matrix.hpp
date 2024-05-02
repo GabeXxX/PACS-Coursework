@@ -122,11 +122,6 @@ namespace algebra
     {
         n_rows = nrows;
         n_columns = ncolumns;
-
-        if (compressed)
-        {
-            // compressed_data.resize(n_rows * n_columns);
-        }
     };
 
     template <typename T, StorageOrder Order>
@@ -138,7 +133,6 @@ namespace algebra
         }
         if (!compressed)
         {
-
             auto it = uncompressed_data.find({i, j});
             return (it != uncompressed_data.end()) ? it->second : sparse_element;
         }
@@ -261,26 +255,14 @@ namespace algebra
     template <typename T, StorageOrder Order>
     void Matrix<T, Order>::uncompress()
     {
-        if (compressed)
+
+        if (Order == StorageOrder::ROWMAJOR)
         {
-            if (Order == StorageOrder::ROWMAJOR)
+            for (std::size_t i = 0; i < n_rows; ++i)
             {
-                for (std::size_t i = 0; i < n_rows; ++i)
+                for (std::size_t k = compressed_inner_indexes[i]; k < compressed_inner_indexes[i + 1]; ++k)
                 {
-                    for (std::size_t k = compressed_inner_indexes[i]; k < compressed_inner_indexes[i + 1]; ++k)
-                    {
-                        uncompressed_data[{i, compressed_outer_indexes[k]}] = compressed_data[k];
-                    }
-                }
-            }
-            else
-            {
-                for (std::size_t j = 0; j < n_columns; ++j)
-                {
-                    for (std::size_t k = compressed_inner_indexes[j]; k < compressed_inner_indexes[j + 1]; ++k)
-                    {
-                        uncompressed_data[{j, compressed_outer_indexes[k]}] = compressed_data[k];
-                    }
+                    uncompressed_data[{i, compressed_outer_indexes[k]}] = compressed_data[k];
                 }
             }
 
@@ -303,7 +285,7 @@ namespace algebra
             throw std::runtime_error("Non comforming size for the input vector");
         }
 
-        std::vector<T> result(n_columns, 0); // Initialize result vector
+        std::vector<T> result(n_rows, 0); // Initialize result vector
 
         if (compressed)
         {
@@ -334,44 +316,12 @@ namespace algebra
         else
         {
             // Uncompressed state
-            if (Order == StorageOrder::ROWMAJOR)
+            for (const auto &elem : uncompressed_data)
             {
+                std::size_t i = elem.first[0]; // Row index
+                std::size_t j = elem.first[1]; // Column index
 
-                /*for (size_t i = 0; i < n_rows; i++)
-                {
-                    for (size_t j = 0; j < n_columns; j++)
-                    {
-                        result[i] += this->operator()(i, j) * v[j];
-                    }
-                }*/
-
-                // Row-wise multiplication
-                for (const auto &elem : uncompressed_data)
-                {
-                    std::size_t i = elem.first[0]; // Row index
-                    std::size_t j = elem.first[1]; // Column index
-
-                    result[i] += elem.second * v[j];
-                }
-            }
-            else
-            {
-                /*for (size_t j = 0; j < n_columns; j++)
-                {
-                    for (size_t i = 0; i < n_rows; i++)
-                    {
-                        result[i] += this->operator()(i, j) * v[j];
-                    }
-                }*/
-
-                // Column-wise multiplication
-                for (const auto &elem : uncompressed_data)
-                {
-                    std::size_t i = elem.first[0]; // Row index
-                    std::size_t j = elem.first[1]; // Column index
-
-                    result[j] += elem.second * v[i];
-                }
+                result[i] += elem.second * v[j];
             }
         }
 

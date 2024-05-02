@@ -38,6 +38,7 @@ int main()
     test_matrix(0,1) = 2;
     test_matrix(3,1) = 2;
     test_matrix.compress(); //ok
+    test_matrix.uncompress();
     test_matrix.print();
 
     std::vector<double> unary_vector(3, 1);
