@@ -138,16 +138,9 @@ namespace algebra
         }
         if (!compressed)
         {
-            if (Order == StorageOrder::ROWMAJOR)
-            {
-                auto it = uncompressed_data.find({i, j});
-                return (it != uncompressed_data.end()) ? it->second : sparse_element;
-            }
-            else
-            {
-                auto it = uncompressed_data.find({j, i});
-                return (it != uncompressed_data.end()) ? it->second : sparse_element;
-            }
+
+            auto it = uncompressed_data.find({i, j});
+            return (it != uncompressed_data.end()) ? it->second : sparse_element;
         }
         else
         {
@@ -197,10 +190,7 @@ namespace algebra
         }
         else
         {
-            if (Order == StorageOrder::ROWMAJOR)
-                return uncompressed_data[{i, j}];
-            else
-                return uncompressed_data[{j, i}];
+            return uncompressed_data[{i, j}];
         }
     };
 
@@ -308,10 +298,11 @@ namespace algebra
     template <typename T, StorageOrder Order>
     std::vector<T> Matrix<T, Order>::operator*(const std::vector<T> &v) const
     {
-        if(v.size() != n_columns){
+        if (v.size() != n_columns)
+        {
             throw std::runtime_error("Non comforming size for the input vector");
         }
-        
+
         std::vector<T> result(n_columns, 0); // Initialize result vector
 
         if (compressed)
