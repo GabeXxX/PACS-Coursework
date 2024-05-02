@@ -1,29 +1,27 @@
-#include "Matrix.hpp"
-#include <iostream>
-#include <fstream>
+#include "Test.hpp"
 
 using namespace algebra;
 
 int main()
 {
+    // Creating the matrix by row and column
+    std::string file_path = "./assets/lnsp_131.mtx";
+    Matrix<double, StorageOrder::ROWMAJOR> test_matrix_row(1, 1);
+    test_matrix_row.read_from_file(file_path);
+    Matrix<double, StorageOrder::COLMAJOR> test_matrix_col(1, 1);
+    test_matrix_col.read_from_file(file_path);
 
-    Matrix<double, StorageOrder::ROWMAJOR> test_matrix(4, 3);
+    // Timiming the matrix vector multiplication for non compressed matrix
+    std::cout << "Matrix Row-major not compressed:"<<std::endl;
+    timing_matrix(test_matrix_row);
+    std::cout << "Matrix Column-major not compressed:"<<std::endl;
+    timing_matrix(test_matrix_col);
 
-    std::vector<double> unary_vector(131, 1);
-
-    std::vector<double> result = test_matrix.operator*(unary_vector);
-
-    for (size_t i = 0; i < 131; i++)
-    {
-        std::cout<<result[i]<<std::endl;
-    } 
-
-
-    //TODO: test with chrono utility and activate optimization in compiler
-    
-    
-
-    
-    
-
+    // Timiming the matrix vector multiplication for compressed matrix
+    test_matrix_row.compress();
+    test_matrix_col.compress();
+    std::cout << "Matrix Row-major compressed:"<<std::endl;
+    timing_matrix(test_matrix_col);
+    std::cout << "Matrix Column-major compressed:"<<std::endl;
+    timing_matrix(test_matrix_col);
 }

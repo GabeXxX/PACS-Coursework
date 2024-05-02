@@ -216,12 +216,6 @@ namespace algebra
                 {
                     compressed_inner_indexes[i] += compressed_inner_indexes[i - 1];
                 }
-
-                for (size_t i = 0; i < compressed_data.size(); i++)
-                {
-                    std::cout << compressed_data[i] << std::endl;
-                    std::cout << compressed_outer_indexes[i] << std::endl;
-                }
             }
             else
             {
@@ -345,17 +339,12 @@ namespace algebra
 
             // Read number of rows and columns
             myfile >> n_rows >> n_columns >> n_lines;
-            std::cout << n_rows << std::endl;
-            std::cout << n_columns << std::endl;
-            std::cout << n_lines << std::endl;
             resize(n_rows, n_columns);
 
             // fill the matrix with data
             for (int l = 0; l < n_lines; l++)
             {
                 myfile >> i >> j >> value;
-                // std::cout << i << std::endl;
-                // std::cout << j << std::endl;
                 this->operator()(i - 1, j - 1) = value;
             }
         }
