@@ -2,6 +2,7 @@
 #include <array>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 namespace algebra
 {
@@ -31,6 +32,7 @@ namespace algebra
         std::size_t n_rows = 0;
         std::size_t n_columns = 0;
         bool compressed = false;
+        T sparse_element = 0;
 
     public:
         /*!
@@ -53,7 +55,7 @@ namespace algebra
          * @param j Column index
          * @return std::out_of_range if indexes are out of range
          */
-        const T &operator()(std::size_t i, std::size_t j, const T &value) const;
+        const T &operator()(std::size_t i, std::size_t j) const;
 
         /*!
          * Method to set/add element in the matrix
@@ -61,7 +63,7 @@ namespace algebra
          * @param j Column index
          * @return std::out_of_range if indexes are out of range
          */
-        T &operator()(std::size_t i, std::size_t j, const T &value);
+        T &operator()(std::size_t i, std::size_t j);
 
         /*!
          * Compress the matrix storage
@@ -89,10 +91,25 @@ namespace algebra
         std::vector<T> operator*(const std::vector<T> &v) const;
 
         /*!
+         * Print the matrix
+         */
+        void print() const
+        {
+            for (std::size_t i = 0; i < n_rows; ++i)
+            {
+                for (std::size_t j = 0; j < n_columns; ++j)
+                {
+                    std::cout << operator()(i, j) << " ";
+                }
+
+                std::cout << "\n";
+            }
+        }
+
+        /*!
          * Read matrix a file formatted in matrix market format
          */
-        template <typename T, StorageOrder Order>
-        friend Matrix<T, Order> read_from_file(std::istream &input);
+        void read_from_file(std::string &file_path);
     };
 
     /*
@@ -108,12 +125,12 @@ namespace algebra
 
         if (compressed)
         {
-            compressed_data.resize(n_rows * n_columns);
+            // compressed_data.resize(n_rows * n_columns);
         }
     };
 
     template <typename T, StorageOrder Order>
-    const T &Matrix<T, Order>::operator()(std::size_t i, std::size_t j, const T &value) const
+    const T &Matrix<T, Order>::operator()(std::size_t i, std::size_t j) const
     {
         if (i >= n_rows || j >= n_columns)
         {
@@ -124,63 +141,51 @@ namespace algebra
             if (Order == StorageOrder::ROWMAJOR)
             {
                 auto it = uncompressed_data.find({i, j});
-                return (it != uncompressed_data.end()) ? it->second : 0;
+                return (it != uncompressed_data.end()) ? it->second : sparse_element;
             }
             else
             {
                 auto it = uncompressed_data.find({j, i});
-                return (it != uncompressed_data.end()) ? it->second : 0;
+                return (it != uncompressed_data.end()) ? it->second : sparse_element;
             }
         }
         else
         {
             if (Order == StorageOrder::ROWMAJOR)
             {
-                // Find the starting index of non-zero elements in row i
-                std::size_t row_start = compressed_outer_indexes[i];
+                std::size_t row_start = compressed_inner_indexes[i];
+                std::size_t row_end = compressed_inner_indexes[i + 1];
 
-                // Find the end index (exclusive) of non-zero elements in row i
-                std::size_t row_end = (i == n_rows - 1) ? compressed_data.size() : compressed_outer_indexes[i + 1];
-
-                // Search for the element at column j within row i
-                for (std::size_t idx = row_start; idx < row_end; ++idx)
+                for (std::size_t k = row_start; k < row_end; ++k)
                 {
-                    if (compressed_inner_indexes[idx] == j)
+                    if (compressed_outer_indexes[k] == j)
                     {
-                        // Element found
-                        return compressed_data[idx];
+                        return compressed_data[k];
                     }
                 }
 
-                // Element not found
-                return 0;
+                return sparse_element;
             }
             else
             {
-                // Find the starting index of non-zero elements in column j
-                std::size_t col_start = compressed_outer_indexes[j];
+                std::size_t col_start = compressed_inner_indexes[j];
+                std::size_t col_end = compressed_inner_indexes[j + 1];
 
-                // Find the end index (exclusive) of non-zero elements in column j
-                std::size_t col_end = (j == n_columns - 1) ? compressed_data.size() : compressed_outer_indexes[j + 1];
-
-                // Search for the element in row i within column j
-                for (std::size_t idx = col_start; idx < col_end; ++idx)
+                for (std::size_t k = col_start; k < col_end; ++k)
                 {
-                    if (compressed_inner_indexes[idx] == i)
+                    if (compressed_outer_indexes[k] == i)
                     {
-                        // Element found
-                        return compressed_data[idx];
+                        return compressed_data[k];
                     }
                 }
 
-                // Element not found
-                return 0;
+                return sparse_element;
             }
         }
     };
 
     template <typename T, StorageOrder Order>
-    T &Matrix<T, Order>::operator()(std::size_t i, std::size_t j, const T &value)
+    T &Matrix<T, Order>::operator()(std::size_t i, std::size_t j)
     {
         if (i >= n_rows || j >= n_columns)
         {
@@ -193,9 +198,9 @@ namespace algebra
         else
         {
             if (Order == StorageOrder::ROWMAJOR)
-                uncompressed_data[{i, j}] = value;
+                return uncompressed_data[{i, j}];
             else
-                uncompressed_data[{j, i}] = value;
+                return uncompressed_data[{j, i}];
         }
     };
 
@@ -204,6 +209,9 @@ namespace algebra
     {
         if (!compressed)
         {
+            // std::cout<<uncompressed_data.size()<<std::endl;
+            compressed_inner_indexes.resize(n_rows + 1);
+
             if (Order == StorageOrder::ROWMAJOR)
             {
                 // Compressed Sparse Row
@@ -223,6 +231,12 @@ namespace algebra
                 for (std::size_t i = 1; i <= n_rows; ++i)
                 {
                     compressed_inner_indexes[i] += compressed_inner_indexes[i - 1];
+                }
+
+                for (size_t i = 0; i < compressed_data.size(); i++)
+                {
+                    std::cout << compressed_data[i] << std::endl;
+                    std::cout << compressed_outer_indexes[i] << std::endl;
                 }
             }
             else
@@ -245,7 +259,6 @@ namespace algebra
                     compressed_inner_indexes[j] += compressed_inner_indexes[j - 1];
                 }
             }
-
             compressed = true;
             uncompressed_data.clear();
         }
@@ -295,7 +308,11 @@ namespace algebra
     template <typename T, StorageOrder Order>
     std::vector<T> Matrix<T, Order>::operator*(const std::vector<T> &v) const
     {
-        std::vector<T> result(n_rows, 0); // Initialize result vector
+        if(v.size() != n_columns){
+            throw std::runtime_error("Non comforming size for the input vector");
+        }
+        
+        std::vector<T> result(n_columns, 0); // Initialize result vector
 
         if (compressed)
         {
@@ -328,6 +345,15 @@ namespace algebra
             // Uncompressed state
             if (Order == StorageOrder::ROWMAJOR)
             {
+
+                /*for (size_t i = 0; i < n_rows; i++)
+                {
+                    for (size_t j = 0; j < n_columns; j++)
+                    {
+                        result[i] += this->operator()(i, j) * v[j];
+                    }
+                }*/
+
                 // Row-wise multiplication
                 for (const auto &elem : uncompressed_data)
                 {
@@ -339,6 +365,14 @@ namespace algebra
             }
             else
             {
+                /*for (size_t j = 0; j < n_columns; j++)
+                {
+                    for (size_t i = 0; i < n_rows; i++)
+                    {
+                        result[i] += this->operator()(i, j) * v[j];
+                    }
+                }*/
+
                 // Column-wise multiplication
                 for (const auto &elem : uncompressed_data)
                 {
@@ -354,18 +388,37 @@ namespace algebra
     };
 
     template <typename T, StorageOrder Order>
-    Matrix<T, Order> read_from_file(std::istream &input)
+    void Matrix<T, Order>::read_from_file(std::string &file_path)
     {
-        input >> n_rows >> n_columns;
-        this->resize(n_rows, n_columns);
-        for (std::size_t i = 0; i < n_rows; ++i)
-            for (std::size_t j = 0; j < n_columns; ++j)
-                input >> this->operator()(i, j);
+        std::fstream myfile(file_path);
+        std::size_t i, j, n_lines;
+        double value;
 
-        if (!input.good())
+        if (myfile.is_open())
         {
-            throw std::runtime_error("Problems while reading from file");
-        }
-    }
+            // Ignore comments headers
+            while (myfile.peek() == '%')
+            {
+                myfile.ignore(2048, '\n');
+            }
 
+            // Read number of rows and columns
+            myfile >> n_rows >> n_columns >> n_lines;
+            std::cout << n_rows << std::endl;
+            std::cout << n_columns << std::endl;
+            std::cout << n_lines << std::endl;
+            resize(n_rows, n_columns);
+
+            // fill the matrix with data
+            for (int l = 0; l < n_lines; l++)
+            {
+                myfile >> i >> j >> value;
+                // std::cout << i << std::endl;
+                // std::cout << j << std::endl;
+                this->operator()(i - 1, j - 1) = value;
+            }
+        }
+
+        myfile.close();
+    };
 }
