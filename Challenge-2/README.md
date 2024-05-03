@@ -18,5 +18,5 @@ make
 ```
 
 ## Documentation
-The Doxygen generated documentation is available at the following [link](https://gabexxx.github.io/PACS-Coursework/html/classalgebra_1_1_matrix.html).
+The Doxygen generated documentation is available at the following [link](https://gabexxx.github.io/PACS-Coursework/html/classalgebra_1_1_matrix.html){:target="_blank"}.
 
