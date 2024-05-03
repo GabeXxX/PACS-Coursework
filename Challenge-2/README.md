@@ -24,7 +24,7 @@ The Doxygen generated documentation is available at the following [link](https:/
 Although it is not documented in the code so as not to fill it with comments, the algorithm used to perform the product between matrix and vector is explained in this [link](https://www.netlib.org/utk/people/JackDongarra/etemplates/node382.html).
 
 ## Performance
-The performance of the matrix-vector product using both uncompressed and compressed representations was measured using the `Chrono` utility, with both rowmajor and columnmajor sorting. 100 trials were performed for each of the possible 4 cases. Below are the average execution times for each case
+The performance of the matrix-vector product using both uncompressed and compressed representations was measured using the `Chrono` utility, with both rowmajor and columnmajor sorting. 100 trials were performed for each of the possible 4 cases, using a 131x131 sparse matrix with 536 non-zero elements available [here](https://math.nist.gov/MatrixMarket/data/Harwell-Boeing/lns/lnsp_131.html). Below are the average execution times for each case
 
 ```
 Matrix Row-major not compressed:
@@ -39,4 +39,3 @@ Average execution time: 1089 nanoseconds
 Matrix Column-major compressed:
 Average execution time: 1100 nanoseconds
 ```
-
