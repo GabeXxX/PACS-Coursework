@@ -27,7 +27,7 @@ namespace algebra
         auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start) / 100;
 
         // Output the execution time
-        std::cout << "Execution time: " << duration.count() << " nanoseconds" << std::endl;
+        std::cout << "Average execution time: " << duration.count() << " nanoseconds" << std::endl;
 
         return duration.count();
     }
