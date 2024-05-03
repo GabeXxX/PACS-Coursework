@@ -27,8 +27,8 @@ namespace algebra
     private:
         std::map<std::array<std::size_t, 2>, T> uncompressed_data;
         std::vector<T> compressed_data;
-        std::vector<std::size_t> compressed_inner_indexes;
-        std::vector<std::size_t> compressed_outer_indexes;
+        std::vector<std::size_t> offsets_vector;
+        std::vector<std::size_t> indices_vector;
         std::size_t n_rows = 0;
         std::size_t n_columns = 0;
         bool compressed = false;
@@ -140,32 +140,40 @@ namespace algebra
         {
             if (Order == StorageOrder::ROWMAJOR)
             {
-                std::size_t row_start = compressed_inner_indexes[i];
-                std::size_t row_end = compressed_inner_indexes[i + 1];
+                // Localizing the row
+                std::size_t row_start = offsets_vector[i];
+                std::size_t row_end = offsets_vector[i + 1];
 
+                // Scan the row's columns 
                 for (std::size_t k = row_start; k < row_end; ++k)
-                {
-                    if (compressed_outer_indexes[k] == j)
+                {   
+                    // Return the element if the right index is found     
+                    if (indices_vector[k] == j)
                     {
                         return compressed_data[k];
                     }
                 }
 
+                // return 0 if the element is not found
                 return sparse_element;
             }
             else
             {
-                std::size_t col_start = compressed_inner_indexes[j];
-                std::size_t col_end = compressed_inner_indexes[j + 1];
+                // Localizing the column 
+                std::size_t col_start = offsets_vector[j];
+                std::size_t col_end = offsets_vector[j + 1];
 
+                // Scan the column's rows 
                 for (std::size_t k = col_start; k < col_end; ++k)
                 {
-                    if (compressed_outer_indexes[k] == i)
+                    // Return the element if the right index is found 
+                    if (indices_vector[k] == i)
                     {
                         return compressed_data[k];
                     }
                 }
 
+                // return 0 if the element is not found
                 return sparse_element;
             }
         }
@@ -193,8 +201,7 @@ namespace algebra
     {
         if (!compressed)
         {
-            // std::cout<<uncompressed_data.size()<<std::endl;
-            compressed_inner_indexes.resize(n_rows + 1);
+            offsets_vector.resize(n_rows + 1);
 
             if (Order == StorageOrder::ROWMAJOR)
             {
@@ -204,17 +211,21 @@ namespace algebra
                     std::size_t i = elem.first[0];
                     std::size_t j = elem.first[1];
 
+                    // Populate data vector
                     compressed_data.push_back(elem.second);
-                    compressed_outer_indexes.push_back(j);
+
+                    // Populate column indices vector
+                    indices_vector.push_back(j);
 
                     // Counting the number of non-zero elements encountered in each row of the matrix
-                    compressed_inner_indexes[i + 1]++;
+                    offsets_vector[i + 1]++;
                 }
 
                 // Accumulates the counts from the previous rows, effectively transforming the counts into the starting indexes for each row in the compressed format
                 for (std::size_t i = 1; i <= n_rows; ++i)
                 {
-                    compressed_inner_indexes[i] += compressed_inner_indexes[i - 1];
+                    // Populating starting row offset vector
+                    offsets_vector[i] += offsets_vector[i - 1];
                 }
             }
             else
@@ -225,16 +236,21 @@ namespace algebra
                     std::size_t i = elem.first[0];
                     std::size_t j = elem.first[1];
 
+                    // Populate data vector
                     compressed_data.push_back(elem.second);
-                    compressed_outer_indexes.push_back(i);
 
-                    // Counting the number of non-zero elements encountered in each row of the matrix
-                    compressed_inner_indexes[j + 1]++;
+                    // Populate row indices vector
+                    indices_vector.push_back(i);
+
+                    // Counting the number of non-zero elements encountered in each column of the matrix
+                    offsets_vector[j + 1]++;
                 }
 
+                // Accumulates the counts from the previous columns, effectively transforming the counts into the starting indexes for each column in the compressed format
                 for (std::size_t j = 1; j <= n_columns; ++j)
                 {
-                    compressed_inner_indexes[j] += compressed_inner_indexes[j - 1];
+                    // Populating starting column offset vector
+                    offsets_vector[j] += offsets_vector[j - 1];
                 }
             }
             compressed = true;
@@ -254,16 +270,16 @@ namespace algebra
         {
             for (std::size_t i = 0; i < n_rows; ++i)
             {
-                for (std::size_t k = compressed_inner_indexes[i]; k < compressed_inner_indexes[i + 1]; ++k)
+                for (std::size_t k = offsets_vector[i]; k < offsets_vector[i + 1]; ++k)
                 {
-                    uncompressed_data[{i, compressed_outer_indexes[k]}] = compressed_data[k];
+                    uncompressed_data[{i, indices_vector[k]}] = compressed_data[k];
                 }
             }
 
             compressed = false;
             compressed_data.clear();
-            compressed_inner_indexes.clear();
-            compressed_outer_indexes.clear();
+            offsets_vector.clear();
+            indices_vector.clear();
         }
         else
         {
@@ -289,9 +305,9 @@ namespace algebra
                 // Row-wise multiplication (CSR format)
                 for (std::size_t i = 0; i < n_rows; ++i)
                 {
-                    for (std::size_t k = compressed_inner_indexes[i]; k < compressed_inner_indexes[i + 1]; ++k)
+                    for (std::size_t k = offsets_vector[i]; k < offsets_vector[i + 1]; ++k)
                     {
-                        result[i] += compressed_data[k] * v[compressed_outer_indexes[k]];
+                        result[i] += compressed_data[k] * v[indices_vector[k]];
                     }
                 }
             }
@@ -300,9 +316,9 @@ namespace algebra
                 // Column-wise multiplication (CSC format)
                 for (std::size_t j = 0; j < n_columns; ++j)
                 {
-                    for (std::size_t k = compressed_inner_indexes[j]; k < compressed_inner_indexes[j + 1]; ++k)
+                    for (std::size_t k = offsets_vector[j]; k < offsets_vector[j + 1]; ++k)
                     {
-                        result[compressed_outer_indexes[k]] += compressed_data[k] * v[j];
+                        result[indices_vector[k]] += compressed_data[k] * v[j];
                     }
                 }
             }
@@ -312,8 +328,8 @@ namespace algebra
             // Uncompressed state
             for (const auto &elem : uncompressed_data)
             {
-                std::size_t i = elem.first[0]; // Row index
-                std::size_t j = elem.first[1]; // Column index
+                std::size_t i = elem.first[0];
+                std::size_t j = elem.first[1];
 
                 result[i] += elem.second * v[j];
             }
