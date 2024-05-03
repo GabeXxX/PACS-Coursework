@@ -1,0 +1,19 @@
+# Doxyfile
+
+# Set the name of the project
+PROJECT_NAME = "PACS Challange"
+
+# Set source directory
+INPUT = /Users/gabrielebruni/Sviluppo/pacs-course/Test/Pacs-Courseworks/
+
+# Enable/Disable generation of main HTML index page
+GENERATE_HTML = YES
+
+# Enable/Disable generation of tree view
+GENERATE_TREEVIEW = YES
+
+# Enable/Disable generation of LaTeX documentation
+GENERATE_LATEX = NO
+
+# Recursively scan the source directory
+RECURSIVE = YES

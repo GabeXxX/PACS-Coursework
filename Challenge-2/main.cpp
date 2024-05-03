@@ -24,4 +24,10 @@ int main()
     timing_matrix(test_matrix_col);
     std::cout << "Matrix Column-major compressed:"<<std::endl;
     timing_matrix(test_matrix_col);
+
+    //TODO: 
+    // 1. check the code again and understand it
+    // 2. write readme.md file
+    // configure github repo as the prof want
+    // upload the project
 }
