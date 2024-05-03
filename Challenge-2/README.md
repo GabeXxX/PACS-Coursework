@@ -4,7 +4,7 @@
 This repo contains source code and descriptions for the second challenge of the PACS (Advanced Programming for Scientific Computing) course at Politecnico di Milano.
 
 Code is organized in the following files:
-- `Matrix.hpp contains the declaration and definition of the class implementing the matrix function.  
+- `Matrix.hpp` contains the declaration and definition of the class implementing the matrix function.  
 
 - `Test.hpp` contains the declaration and definition of the code used to test and chrono the matrix implementation.  
 
