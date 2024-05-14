@@ -35,5 +35,4 @@
 #
 .vscode
 .DS_Store
-Makefile
 main
