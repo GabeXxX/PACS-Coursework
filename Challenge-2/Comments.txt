@@ -1,0 +1,19 @@
+
+
+Checklist:
+  - sparse_matrix constructor:   OKAY
+  - compress:                    OKAY
+  - uncompress:                  OKAY
+  - data is properly cleared:    OKAY
+  - call to non-const / const assignment operator: OKAY
+  - resize method:               OKAY
+  - operator*:                   OKAY
+  - reading from file:           OKAY
+
+EXTRAs
+no extras
+
+General: 
+  - You had a very simple warning on a conversion on a loop. It was very easy to fix, I've just changed the type of the iterator from int to size_t. If compiler complains, also with small warnings, try to understand why.
+
+Overall the code is well written and well organized.
